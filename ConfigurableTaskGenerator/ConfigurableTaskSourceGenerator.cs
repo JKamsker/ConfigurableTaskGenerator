@@ -27,60 +27,35 @@ public class ConfigurableTaskSourceGenerator : ISourceGenerator
         Compilation compilation = context.Compilation;
 
         GenerateAwaiterClasses(context, receiver, compilation);
+
+        GeneratePartialClassMethods(context, receiver, compilation);
+
+        // Generate CreateConfigurableTaskAttribute if it doesn't exist in the current compilation
+        GenerateCreateConfigurableTaskAttribute(context, compilation);
     }
 
-    /*
-     Generates wrapper methods for each method in the class that has the attribute
-     For eg:
-        public partial class SomeService
-        {
-            // Given
-            private Task<string> DoSomething(SomeArgs data)
-            {
-                return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
-            }
-
-            // Generated
-            public SomeArgsAwaiter<string> DoSomethingAsync()
-            {
-                return new SomeArgsAwaiter<string>(DoSomething);
-            }
-
-            // Given
-            private Task<string> DoSomething1(SomeArgs data, string additionalString)
-            {
-                return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}: {additionalString}");
-            }
-
-            // Generated
-            public SomeArgsAwaiter<string> DoSomething1Async(string additionalString)
-            {
-                return new SomeArgsAwaiter<string>(args => DoSomething1(args, additionalString));
-            }
-        }
-     */
-    private void GeneratePartialClassMethods(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
+    private void GenerateCreateConfigurableTaskAttribute(GeneratorExecutionContext context, Compilation compilation)
     {
-        foreach (var methodDecl in receiver.GetCandidateMethods())
-        {
-            SemanticModel model = compilation.GetSemanticModel(methodDecl.SyntaxTree);
-            var methodSymbol = model.GetDeclaredSymbol(methodDecl) as IMethodSymbol;
+        if (compilation.GetTypeByMetadataName("ConfigurableTask.CreateConfigurableTaskAttribute") != null)
+            return;
 
-            if (methodSymbol == null)
-                continue;
+        var sourceBuilder = new StringBuilder($@"
+    using System;
+    namespace ConfigurableTask
+    {{
+        [AttributeUsage(AttributeTargets.Class)]
+        public class CreateConfigurableTaskAttribute : Attribute
+        {{
+        }}
+    }}
+");
 
-            // Generate source code for each candidate method
-            string sourceCode = GeneratePartialClassMethod(methodSymbol);
-            context.AddSource($"{methodSymbol.Name}_TaskGenerator.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
-        }
+        context.AddSource("CreateConfigurableTaskAttribute.g.cs", SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
     }
-
-
-    
 
     private void GenerateAwaiterClasses(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
     {
-        foreach (var classDecl in receiver.CandidateClasses)
+        foreach (var classDecl in receiver.ConfigurableTaskClasses)
         {
             SemanticModel model = compilation.GetSemanticModel(classDecl.SyntaxTree);
             var classSymbol = model.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
@@ -104,6 +79,7 @@ public class ConfigurableTaskSourceGenerator : ISourceGenerator
 using System;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.ComponentModel;
 
 namespace {namespaceName}
 {{
@@ -124,7 +100,7 @@ namespace {namespaceName}
             _taskFactory = taskFactory;
         }}
 
-        public async Task<T> AwaitAsync()
+        private async Task<T> AwaitAsync()
         {{
             foreach (var taskGenerator in _taskGenerators)
             {{
@@ -132,7 +108,8 @@ namespace {namespaceName}
             }}
             return await _taskFactory(_args);
         }}
-
+        
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public TaskAwaiter<T> GetAwaiter()
         {{
             return AwaitAsync().GetAwaiter();
@@ -233,29 +210,164 @@ namespace {namespaceName}
             }
         }
     }
-}
 
-public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
-{
-    private HashSet<string> _candidateClassNames = new HashSet<string>();
-    public List<ClassDeclarationSyntax> CandidateClasses { get; } = new List<ClassDeclarationSyntax>();
-
-    // Methods that have a parameter of a type in the candidate classes
-    public List<MethodDeclarationSyntax> CandidateMethods { get; } = new List<MethodDeclarationSyntax>();
-
-    public IEnumerable<MethodDeclarationSyntax> GetCandidateMethods()
-    {
-        foreach (var method in CandidateMethods)
+    /*
+     Generates wrapper methods for each method in the class that has the attribute
+     For eg:
+        public partial class SomeService
         {
-            var isValidMethod = method.ParameterList.Parameters.Any(p => _candidateClassNames.Contains(p.Type.ToString()));
-            if (!isValidMethod)
+            // Given
+            private Task<string> DoSomething(SomeArgs data)
+            {
+                return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
+            }
+
+            // Generated
+            public SomeArgsAwaiter<string> DoSomethingAsync()
+            {
+                return new SomeArgsAwaiter<string>(DoSomething);
+            }
+
+            // Given
+            private Task<string> DoSomething1(SomeArgs data, string additionalString)
+            {
+                return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}: {additionalString}");
+            }
+
+            // Generated
+            public SomeArgsAwaiter<string> DoSomething1Async(string additionalString)
+            {
+                return new SomeArgsAwaiter<string>(args => DoSomething1(args, additionalString));
+            }
+        }
+     */
+    private void GeneratePartialClassMethods(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
+    {
+        foreach (var classDecl in receiver.PartialClasses)
+        {
+            SemanticModel model = compilation.GetSemanticModel(classDecl.SyntaxTree);
+            var classSymbol = model.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
+
+            if (classSymbol == null)
+                continue;
+
+            // Generate source code for each candidate class
+            string sourceCode = GeneratePartialClassMethods(classSymbol, receiver, compilation);
+            context.AddSource($"{classSymbol.Name}_TaskGenerator.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
+        }
+    }
+
+
+    /*
+     Creates overloads for methods like "Task<string> DoSomething1(SomeArgs data, string additionalString)" to "SomeArgsAwaiter<string> DoSomething1Async(string additionalString)"
+     */
+    private string GeneratePartialClassMethods(INamedTypeSymbol classSymbol, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
+    {
+        string namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
+        var className = classSymbol.Name;
+
+        StringBuilder sourceBuilder = new StringBuilder($@"
+using System;
+using System.Threading.Tasks;
+
+namespace {namespaceName}
+{{
+    public partial class {className}
+    {{
+");
+        // we are now in for eg: SomeService class.
+        // Iterate over all the methods in the class and generate wrapper methods that overload the original method but do not contain the SomeArgs parameter (Which will be created by the generator)
+        foreach (var member in classSymbol.GetMembers().OfType<IMethodSymbol>())
+        {
+            // just relay ordinary methods
+            if (member.MethodKind != MethodKind.Ordinary)
+                continue;
+
+
+            if (member.ReturnType is not INamedTypeSymbol returnType)
             {
                 continue;
             }
 
-            yield return method;
+            var isGenericTask = returnType.IsGenericType
+                && returnType.Name == "Task";
+
+            if (!isGenericTask)
+            {
+                continue;
+            }
+
+            // find param that is in the ConfigurableTaskClasses list
+            if (!TryPickParam(receiver, member, out var param, out var parameters))
+            {
+                continue;
+            }
+
+
+            // Turn "Task<string>" into "SomeArgsAwaiter<string>"
+            var newReturnType = $"{param.Type.Name}Awaiter<{returnType.TypeArguments.FirstOrDefault()}>";
+
+            var signature = $"public {newReturnType} {member.Name}({string.Join(", ", parameters.Select(p => $"{p.Type} {p.Name}"))})";
+
+
+
+            //callParameters but with args instead of the original parameter
+            var callParameters = string.Join(", ", member.Parameters.Select(p => p.Equals(param, SymbolEqualityComparer.Default) ? "args" : p.Name));
+
+            sourceBuilder.AppendLine($$"""
+                        {{signature}}
+                        {
+                            return new {{newReturnType}}(args => {{member.Name}}({{callParameters}}));
+                            
+                        }
+                """);
+
+
         }
+
+        sourceBuilder.Append("}\n}");
+
+        return sourceBuilder.ToString();
     }
+
+    private static bool TryPickParam(ConfigurableTaskSyntaxReceiver receiver, IMethodSymbol member, out IParameterSymbol identifier, out IEnumerable<IParameterSymbol> parameters)
+    {
+        var param = member.Parameters.FirstOrDefault(p => receiver.ConfigurableTaskClasses.Any(c => c.Identifier.Text == p.Type.Name));
+        identifier = param;
+        if (param == null)
+        {
+            parameters = null;
+            return false;
+        }
+
+        parameters = member.Parameters.Where(p => !SymbolEqualityComparer.Default.Equals(p.Type, param.Type));
+        return param != null;
+    }
+
+}
+
+public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
+{
+    //private HashSet<string> _candidateClassNames = new HashSet<string>();
+    public List<ClassDeclarationSyntax> ConfigurableTaskClasses { get; } = new List<ClassDeclarationSyntax>();
+    public List<ClassDeclarationSyntax> PartialClasses { get; } = new List<ClassDeclarationSyntax>();
+
+    // Methods that have a parameter of a type in the candidate classes
+    //public List<MethodDeclarationSyntax> CandidateMethods { get; } = new List<MethodDeclarationSyntax>();
+
+    //public IEnumerable<MethodDeclarationSyntax> GetCandidateMethods()
+    //{
+    //    foreach (var method in CandidateMethods)
+    //    {
+    //        var isValidMethod = method.ParameterList.Parameters.Any(p => _candidateClassNames.Contains(p.Type.ToString()));
+    //        if (!isValidMethod)
+    //        {
+    //            continue;
+    //        }
+
+    //        yield return method;
+    //    }
+    //}
 
     public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
     {
@@ -265,20 +377,27 @@ public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
             CollectClass(classDecl);
         }
 
-        if (syntaxNode is MethodDeclarationSyntax methodDecl)
-        {
-            CollectMethod(methodDecl);
-        }
+        //if (syntaxNode is MethodDeclarationSyntax methodDecl)
+        //{
+        //    CollectMethod(methodDecl);
+        //}
     }
 
     private void CollectClass(ClassDeclarationSyntax classDecl)
     {
-        if (classDecl.AttributeLists.Any(al => al.Attributes.Any(a => IsConfigurableTaskAttrib(a))))
+
+        if (IsConfigurableTaskClass(classDecl))
         {
-            CandidateClasses.Add(classDecl);
-            _candidateClassNames.Add(classDecl.Identifier.Text);
+            ConfigurableTaskClasses.Add(classDecl);
+        }
+        else if (IsInPartialClass(classDecl))
+        {
+            PartialClasses.Add(classDecl);
         }
     }
+
+
+
 
     private void CollectMethod(MethodDeclarationSyntax methodDecl)
     {
@@ -289,7 +408,7 @@ public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
             return;
         }
 
-        CandidateMethods.Add(methodDecl);
+        //CandidateMethods.Add(methodDecl);
 
         // Unreliable since the class might not be indexed yet
         //var isValidMethod = methodDecl.ParameterList.Parameters.Any(p => _candidateClassNames.Contains(p.Type.ToString()));
@@ -298,6 +417,16 @@ public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
         //    CandidateMethods.Add(methodDecl);
         //    return;
         //}
+    }
+
+    private static bool IsInPartialClass(ClassDeclarationSyntax classDecl)
+    {
+        return classDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
+    }
+
+    private static bool IsConfigurableTaskClass(ClassDeclarationSyntax classDecl)
+    {
+        return classDecl.AttributeLists.Any(al => al.Attributes.Any(a => IsConfigurableTaskAttrib(a)));
     }
 
     private static bool IsConfigurableTaskAttrib(AttributeSyntax a)

@@ -1,13 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using ConfigurableTask;
 
 namespace ConfigurableTaskGenerator.TestApp;
-
-public class CreateConfigurableTaskAttribute : System.Attribute
-{
-    public CreateConfigurableTaskAttribute()
-    {
-    }
-}
 
 [CreateConfigurableTask]
 public class SomeArgs
@@ -36,23 +29,22 @@ public partial class SomeService
         return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
     }
 
-    // Generated
-    public SomeArgsAwaiter<string> DoSomethingAsync()
-    {
-        return new SomeArgsAwaiter<string>(DoSomething);
-    }
-
     // Given
     private Task<string> DoSomething1(SomeArgs data, string additionalString)
     {
         return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}: {additionalString}");
     }
 
-    // Generated
-    public SomeArgsAwaiter<string> DoSomething1Async(string additionalString)
+    private Task<string> DoSomethingAsync(SomeArgs data, int a)
     {
-        return new SomeArgsAwaiter<string>(args => DoSomething1(args, additionalString));
+        return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
     }
+
+    // Generated
+    //public SomeArgsAwaiter<string> DoSomething1Async(string additionalString)
+    //{
+    //    return new SomeArgsAwaiter<string>(args => DoSomething1(args, additionalString));
+    //}
 }
 
 //// This is generated
@@ -97,7 +89,7 @@ public partial class SomeService
 //    private readonly SomeArgs _args;
 //    private readonly Func<SomeArgs, Task<T>> _taskFactory;
 
-   
+
 
 //    public SomeArgsAwaiter(Func<SomeArgs, Task<T>> taskFactory)
 //        : this(new SomeArgs(), taskFactory)
