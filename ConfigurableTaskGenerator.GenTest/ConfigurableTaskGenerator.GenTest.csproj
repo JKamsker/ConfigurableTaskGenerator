@@ -9,5 +9,8 @@
 	<ItemGroup>
 		<PackageReference Include="SourceGeneratorTestHelpers" Version="8.1.0" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\ConfigurableTaskGenerator\ConfigurableTaskGenerator.csproj" />
+	</ItemGroup>
 
 </Project>
