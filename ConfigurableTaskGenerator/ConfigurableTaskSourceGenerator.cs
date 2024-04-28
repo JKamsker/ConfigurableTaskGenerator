@@ -348,26 +348,9 @@ namespace {namespaceName}
 
 public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
 {
-    //private HashSet<string> _candidateClassNames = new HashSet<string>();
     public List<ClassDeclarationSyntax> ConfigurableTaskClasses { get; } = new List<ClassDeclarationSyntax>();
     public List<ClassDeclarationSyntax> PartialClasses { get; } = new List<ClassDeclarationSyntax>();
 
-    // Methods that have a parameter of a type in the candidate classes
-    //public List<MethodDeclarationSyntax> CandidateMethods { get; } = new List<MethodDeclarationSyntax>();
-
-    //public IEnumerable<MethodDeclarationSyntax> GetCandidateMethods()
-    //{
-    //    foreach (var method in CandidateMethods)
-    //    {
-    //        var isValidMethod = method.ParameterList.Parameters.Any(p => _candidateClassNames.Contains(p.Type.ToString()));
-    //        if (!isValidMethod)
-    //        {
-    //            continue;
-    //        }
-
-    //        yield return method;
-    //    }
-    //}
 
     public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
     {
@@ -376,16 +359,10 @@ public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
         {
             CollectClass(classDecl);
         }
-
-        //if (syntaxNode is MethodDeclarationSyntax methodDecl)
-        //{
-        //    CollectMethod(methodDecl);
-        //}
     }
 
     private void CollectClass(ClassDeclarationSyntax classDecl)
     {
-
         if (IsConfigurableTaskClass(classDecl))
         {
             ConfigurableTaskClasses.Add(classDecl);
@@ -394,29 +371,6 @@ public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
         {
             PartialClasses.Add(classDecl);
         }
-    }
-
-
-
-
-    private void CollectMethod(MethodDeclarationSyntax methodDecl)
-    {
-        //var isInPartialClass = methodDecl.Ancestors().OfType<ClassDeclarationSyntax>().Any(c => c.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
-        var isInPartialClass = methodDecl.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault()?.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)) == true;
-        if (!isInPartialClass)
-        {
-            return;
-        }
-
-        //CandidateMethods.Add(methodDecl);
-
-        // Unreliable since the class might not be indexed yet
-        //var isValidMethod = methodDecl.ParameterList.Parameters.Any(p => _candidateClassNames.Contains(p.Type.ToString()));
-        //if (isValidMethod)
-        //{
-        //    CandidateMethods.Add(methodDecl);
-        //    return;
-        //}
     }
 
     private static bool IsInPartialClass(ClassDeclarationSyntax classDecl)

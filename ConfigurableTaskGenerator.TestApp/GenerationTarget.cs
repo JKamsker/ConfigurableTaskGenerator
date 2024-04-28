@@ -39,12 +39,6 @@ public partial class SomeService
     {
         return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
     }
-
-    // Generated
-    //public SomeArgsAwaiter<string> DoSomething1Async(string additionalString)
-    //{
-    //    return new SomeArgsAwaiter<string>(args => DoSomething1(args, additionalString));
-    //}
 }
 
 //// This is generated

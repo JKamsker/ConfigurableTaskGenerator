@@ -10,7 +10,8 @@ internal class Program
         var a = new SomeService();
         await a.DoSomethingAsync(1)
             .SomeAsyncOperation("abc")
-            .WithSomeStuff1("xyz");
+            .WithSomeStuff1("xyz")
+           ;
         //var b = await a.DoSomethingAsync().WithSomeStuff("abc");
 
         await new Test();
