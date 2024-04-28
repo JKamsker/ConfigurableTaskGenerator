@@ -141,24 +141,25 @@ namespace {namespaceName}
             if (signatures.Contains(signature))
                 continue;
 
-            sourceBuilder.AppendLine($@"
-        public {awaiterClassName}<T> With{member.Name}(string someStuff)
-        {{
-            _args.{member.Name} = someStuff;
-            return this;
-        }}
-");
+            sourceBuilder.AppendLine($$"""
+                    public {{awaiterClassName}}<T> With{{member.Name}}(string someStuff)
+                    {
+                        _args.{{member.Name}} = someStuff;
+                        return this;
+                    }
+                """);
             signatures.Add(signature);
         }
 
         // Add implicit operator
-        sourceBuilder.Append($@"
-        public static implicit operator {awaiterClassName}<T>(Task<T> task)
-        {{
-            return new {awaiterClassName}<T>(new {className}(), _ => task);
-        }}
-    }}
-}}");
+        sourceBuilder.Append($$"""
+                    public static implicit operator {{awaiterClassName}}<T>(Task<T> task)
+                    {
+                        return new {{awaiterClassName}}<T>(new {{className}}(), _ => task);
+                    }
+                }
+            }
+            """);
 
         return sourceBuilder.ToString();
     }
