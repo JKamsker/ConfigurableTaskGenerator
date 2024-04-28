@@ -2,6 +2,14 @@
 
 namespace ConfigurableTaskGenerator.TestApp;
 
+public class CreateConfigurableTaskAttribute : System.Attribute
+{
+    public CreateConfigurableTaskAttribute()
+    {
+    }
+}
+
+[CreateConfigurableTask]
 public class SomeArgs
 {
     public string SomeStuff { get; set; }
@@ -25,6 +33,7 @@ public partial class SomeService
     public SomeArgsAwaiter<string> DoSomethingAsync()
     {
         return new SomeArgsAwaiter<string>(DoSomething);
+      
     }
 }
 
@@ -97,5 +106,10 @@ public class SomeArgsAwaiter<T>
     {
         _args.SomeStuff = someStuff;
         return this;
+    }
+
+    public static implicit operator SomeArgsAwaiter<T>(Task<T> task)
+    {
+        return new SomeArgsAwaiter<T>(new(), _ => task);
     }
 }

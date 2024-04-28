@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
+	<ItemGroup>
+		<PackageReference Include="SourceGeneratorTestHelpers" Version="8.1.0" />
+	</ItemGroup>
 
 </Project>
