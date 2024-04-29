@@ -284,17 +284,20 @@ namespace {namespaceName}
     public partial class {className}
     {{
 ");
-        
+
+        // We need a list of all args classes that are used in the methods of the class
+
+        var members = classSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(m => m.MethodKind == MethodKind.Ordinary);
+
+        var memberBuilder = new StringBuilder();
+        var parameterTypes = new HashSet<string>();
 
         // we are now in for eg: SomeService class.
         // Iterate over all the methods in the class and generate wrapper methods that overload the original method but do not contain the SomeArgs parameter (Which will be created by the generator)
-        foreach (var member in classSymbol.GetMembers().OfType<IMethodSymbol>())
+        foreach (var member in members)
         {
-            // just relay ordinary methods
-            if (member.MethodKind != MethodKind.Ordinary)
-                continue;
-
-
             if (member.ReturnType is not INamedTypeSymbol returnType)
             {
                 continue;
@@ -314,6 +317,7 @@ namespace {namespaceName}
                 continue;
             }
 
+            parameterTypes.Add(param.Type.Name);
 
             // Turn "Task<string>" into "SomeArgsAwaiter<string>"
             var newReturnType = $"{param.Type.Name}Awaiter<{returnType.TypeArguments.FirstOrDefault()}>";
@@ -325,20 +329,37 @@ namespace {namespaceName}
             //callParameters but with args instead of the original parameter
             var callParameters = string.Join(", ", member.Parameters.Select(p => p.Equals(param, SymbolEqualityComparer.Default) ? "args" : p.Name));
 
-            sourceBuilder.AppendLine($$"""
+            var factoryName = $"_{param.Type.Name.FirstCharToLower()}Factory";
+
+            memberBuilder.AppendLine($$"""
                         {{signature}}
                         {
-                            return new {{newReturnType}}(args => {{member.Name}}({{callParameters}}));
+                            return new {{newReturnType}}({{factoryName}}(this),args => {{member.Name}}({{callParameters}}));
                             
                         }
                 """);
 
-
         }
+
+        // Current servicename: SomeService
+        // parameterTypes for eg: SomeArgs
+        // we need: private Func<SomeService, SomeArgs> _someArgsFactory = _ => new SomeArgs();
+
+        //var privateFields = string.Join("\n", parameterTypes.Select(p => $"private Func<{className}, {p}> _{p.FirstCharToLower()}Factory = _ => new {p}();"));
+        foreach (var p in parameterTypes)
+        {
+            sourceBuilder.AppendLine($$"""
+                        private Func<{{className}}, {{p}}> _{{p.FirstCharToLower()}}Factory = _ => new {{p}}();
+                """);
+        }
+
+        sourceBuilder.Append(memberBuilder);
 
         sourceBuilder.Append("}\n}");
 
-        return sourceBuilder.ToString();
+        var result = sourceBuilder.ToString();
+
+        return result;
     }
 
     private static bool TryPickParam(ConfigurableTaskSyntaxReceiver receiver, IMethodSymbol member, out IParameterSymbol identifier, out IEnumerable<IParameterSymbol> parameters)

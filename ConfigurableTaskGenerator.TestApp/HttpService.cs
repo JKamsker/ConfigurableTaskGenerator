@@ -29,6 +29,11 @@ public partial class HttpService
 {
     public static HttpService Instance { get; } = new HttpService();
 
+    public HttpService()
+    {
+        _httpArgsFactory = svc => new HttpArgs();
+    }
+
     private Task<string> SendAsync(HttpArgs data, HttpMethod method, string url)
     {
         return Task.FromResult($"Sending {data.Method} request to {data.Url}");
