@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigurableTaskGenerator.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigurableTaskGenerator.GenTest", "ConfigurableTaskGenerator.GenTest\ConfigurableTaskGenerator.GenTest.csproj", "{538BA701-8445-457A-877B-94F77BF58259}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigurableTaskGenerator", "ConfigurableTaskGenerator\ConfigurableTaskGenerator.csproj", "{1D515C9D-C556-4817-A593-A22707885953}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigurableTaskGenerator", "ConfigurableTaskGenerator\ConfigurableTaskGenerator.csproj", "{1D515C9D-C556-4817-A593-A22707885953}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigurableTaskGenerator.Tests", "ConfigurableTaskGenerator.Tests\ConfigurableTaskGenerator.Tests.csproj", "{D1DEF113-6979-428D-BA6E-BA45F77C5A4C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{1D515C9D-C556-4817-A593-A22707885953}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D515C9D-C556-4817-A593-A22707885953}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D515C9D-C556-4817-A593-A22707885953}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1DEF113-6979-428D-BA6E-BA45F77C5A4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1DEF113-6979-428D-BA6E-BA45F77C5A4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1DEF113-6979-428D-BA6E-BA45F77C5A4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1DEF113-6979-428D-BA6E-BA45F77C5A4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

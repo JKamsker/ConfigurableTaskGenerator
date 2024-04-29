@@ -31,11 +31,19 @@ public class ConfigurableTaskSourceGenerator : ISourceGenerator
         GeneratePartialClassMethods(context, receiver, compilation);
 
         // Generate CreateConfigurableTaskAttribute if it doesn't exist in the current compilation
-        GenerateCreateConfigurableTaskAttribute(context, compilation);
+        GenerateCreateConfigurableTaskAttribute(context, receiver, compilation);
     }
 
-    private void GenerateCreateConfigurableTaskAttribute(GeneratorExecutionContext context, Compilation compilation)
+    private void GenerateCreateConfigurableTaskAttribute(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
     {
+        //var rootNamespaces = receiver.ConfigurableTaskClasses
+        //    .Select(c => c.GetFirstParentOfType<BaseNamespaceDeclarationSyntax>())
+        //    .Where(n => n != null)
+        //    .Select(n => n.Name.ToString())
+        //    .Distinct()
+        //    .ToList();
+        //    ;
+
         if (compilation.GetTypeByMetadataName("ConfigurableTask.CreateConfigurableTaskAttribute") != null)
             return;
 
@@ -144,14 +152,15 @@ namespace {namespaceName}
             if (!hasPublicSetter)
                 continue;
 
-            var signature = $"public {awaiterClassName}<T> With{member.Name}(string someStuff)";
+            var paramName = member.Name.FirstCharToLower();
+            var signature = $"public {awaiterClassName}<T> With{member.Name}(string {paramName})";
             if (signatures.Contains(signature))
                 continue;
 
             sourceBuilder.AppendLine($$"""
-                        public {{awaiterClassName}}<T> With{{member.Name}}(string someStuff)
+                        {{signature}}
                         {
-                            _args.{{member.Name}} = someStuff;
+                            _args.{{member.Name}} = {{paramName}};
                             return this;
                         }
                 """);
@@ -253,7 +262,7 @@ namespace {namespaceName}
 
             // Generate source code for each candidate class
             string sourceCode = GeneratePartialClassMethods(classSymbol, receiver, compilation);
-            context.AddSource($"{classSymbol.Name}_TaskGenerator.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
+            context.AddSource($"{classSymbol.Name}_TaskAwaiterWrapperGenerator.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
         }
     }
 
@@ -275,6 +284,8 @@ namespace {namespaceName}
     public partial class {className}
     {{
 ");
+        
+
         // we are now in for eg: SomeService class.
         // Iterate over all the methods in the class and generate wrapper methods that overload the original method but do not contain the SomeArgs parameter (Which will be created by the generator)
         foreach (var member in classSymbol.GetMembers().OfType<IMethodSymbol>())

@@ -1,18 +1,16 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis;
 
 using SourceGeneratorTestHelpers;
 
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
-using System.Text.RegularExpressions;
+using Xunit;
 
-namespace ConfigurableTaskGenerator.GenTest;
+namespace ConfigurableTaskGenerator.Tests;
 
-internal class Program
+public class Tests
 {
-    static void Main(string[] args)
+
+    [Fact]
+    public void Test_GenerateTaskGenerator()
     {
         var result = SourceGenerator.Run<ConfigurableTaskSourceGenerator>("""
             namespace ConfigurableTaskGenerator.TestApp;
@@ -68,11 +66,36 @@ internal class Program
             }
             """);
 
+        // HardCode:		result.Results.First().GeneratedSources[0].SourceText.ToString()
+        // result.Results.First().GeneratedSources where HintName == "SomeArgs_TaskGenerator.g.cs" .SourceText.ToString()
+
+        var sourceText = result.Results.First().GeneratedSources.First(x => x.HintName == "SomeArgs_TaskGenerator.g.cs").SourceText.ToString();
+        Assert.NotNull(sourceText);
+        Assert.NotEmpty(sourceText);
 
 
+        // Assertations:
+        // 1: only one WithXYZ method generated
+        // 2: only one WithXZ method generated
+        Assert.Contains("public SomeArgsAwaiter<T> WithXYZ(string xYZ)", sourceText, StringComparison.OrdinalIgnoreCase);
+        var count = CountStringOccurrences(sourceText, "public SomeArgsAwaiter<T> WithXYZ(string xYZ)");
+        Assert.Equal(1, count);
+
+        Assert.Contains("public SomeArgsAwaiter<T> WithYZ(string yZ)", sourceText, StringComparison.OrdinalIgnoreCase);
+        count = CountStringOccurrences(sourceText, "public SomeArgsAwaiter<T> WithYZ(string yZ)");
+        Assert.Equal(1, count);
 
     }
 
-
-
+    private int CountStringOccurrences(string text, string pattern)
+    {
+        int count = 0;
+        int i = 0;
+        while ((i = text.IndexOf(pattern, i, StringComparison.Ordinal)) != -1)
+        {
+            i += pattern.Length;
+            count++;
+        }
+        return count;
+    }
 }

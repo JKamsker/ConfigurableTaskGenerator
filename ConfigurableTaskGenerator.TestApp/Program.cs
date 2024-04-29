@@ -7,22 +7,33 @@ internal class Program
 {
     private static async Task Main(string[] args)
     {
-        var a = new SomeService();
-        await a.DoSomethingAsync(1)
-            .SomeAsyncOperation("abc")
-            .WithSomeStuff1("xyz")
-           ;
-        //var b = await a.DoSomethingAsync().WithSomeStuff("abc");
+        //var a = new SomeService();
+        //await a.DoSomethingAsync(1)
+        //    .SomeAsyncOperation("abc")
+        //    .WithSomeStuff1("xyz")
+        //   ;
+        ////var b = await a.DoSomethingAsync().WithSomeStuff("abc");
 
-        await new Test();
+        //await new Test();
+
+        await HttpService.Instance.SendAsync(HttpMethod.Get, "https://www.google.com")
+            .WithBody("abc")
+
+            ;
     }
 }
 
-public class Test
-{
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public TaskAwaiter<string> GetAwaiter()
-    {
-        return Task.FromResult("abc").GetAwaiter();
-    }
-}
+//// User facing
+//public partial class Test1
+//{
+//    public partial SomeArgs SomeArgsFactory();
+//}
+
+//// Generated
+//public partial class Test1
+//{
+//    //public partial SomeArgs SomeArgsFactory()
+//    //{
+//    //    return new SomeArgs();
+//    //}
+//}
