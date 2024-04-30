@@ -1,8 +1,5 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
+﻿using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis;
-
-using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
@@ -31,32 +28,59 @@ public class ConfigurableTaskSourceGenerator : ISourceGenerator
         GeneratePartialClassMethods(context, receiver, compilation);
 
         // Generate CreateConfigurableTaskAttribute if it doesn't exist in the current compilation
-        GenerateCreateConfigurableTaskAttribute(context, receiver, compilation);
+        GenerateAttributes(context, receiver, compilation);
     }
 
-    private void GenerateCreateConfigurableTaskAttribute(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
+    private void GenerateAttributes(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
     {
-        //var rootNamespaces = receiver.ConfigurableTaskClasses
-        //    .Select(c => c.GetFirstParentOfType<BaseNamespaceDeclarationSyntax>())
-        //    .Where(n => n != null)
-        //    .Select(n => n.Name.ToString())
-        //    .Distinct()
-        //    .ToList();
-        //    ;
+        //if (compilation.GetTypeByMetadataName("ConfigurableTask.CreateConfigurableTaskAttribute") != null)
+        //    return;
 
-        if (compilation.GetTypeByMetadataName("ConfigurableTask.CreateConfigurableTaskAttribute") != null)
-            return;
+        //var sourceBuilder = new StringBuilder($$"""
 
-        var sourceBuilder = new StringBuilder($@"
-    using System;
-    namespace ConfigurableTask
-    {{
-        [AttributeUsage(AttributeTargets.Class)]
-        public class CreateConfigurableTaskAttribute : Attribute
-        {{
-        }}
-    }}
-");
+        //        using System;
+        //        namespace ConfigurableTask
+        //        {
+        //            [AttributeUsage(AttributeTargets.Class)]
+        //            public class CreateConfigurableTaskAttribute : Attribute
+        //            {
+        //            }
+        //        }
+
+        //    """);
+
+        var sourceBuilder = new StringBuilder($$"""
+
+                using System;
+                namespace ConfigurableTask
+                {
+            """);
+
+        if (compilation.GetTypeByMetadataName("ConfigurableTask.CreateConfigurableTaskAttribute") == null)
+        {
+            sourceBuilder.AppendLine($$"""
+                    [AttributeUsage(AttributeTargets.Class)]
+                    public class CreateConfigurableTaskAttribute : Attribute
+                    {
+                    }
+                """);
+        }
+
+        // Attribute to skip generation of property setter methods (Works on the whole class or on a single property)
+        if (compilation.GetTypeByMetadataName("ConfigurableTask.SkipSetterGenerationAttribute") == null)
+        {
+            sourceBuilder.AppendLine($$"""
+                    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
+                    public class SkipSetterGenerationAttribute : Attribute
+                    {
+                    }
+                """);
+        }
+
+
+        sourceBuilder.AppendLine("}");
+
+
 
         context.AddSource("CreateConfigurableTaskAttribute.g.cs", SourceText.From(sourceBuilder.ToString(), Encoding.UTF8));
     }
@@ -73,7 +97,7 @@ public class ConfigurableTaskSourceGenerator : ISourceGenerator
 
             // Generate source code for each candidate class
             string sourceCode = GenerateAwaiterClass(classSymbol);
-            context.AddSource($"{classSymbol.Name}_TaskGenerator.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
+            context.AddSource($"{classSymbol.Name}_AwaitableTask.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
         }
     }
 
@@ -146,14 +170,25 @@ namespace {namespaceName}
 
     private static void GenerateSetterMethodsForProperties(INamedTypeSymbol classSymbol, string awaiterClassName, StringBuilder sourceBuilder, List<string> signatures)
     {
+        // check if the ``SkipSetterGenerationAttribute`` is present on the class
+        var skipSetterGeneration = classSymbol.GetAttributes().Any(a => IsSetterGenerationAttribute(a));
+        if (skipSetterGeneration)
+            return;
+
         foreach (var member in classSymbol.GetMembers().OfType<IPropertySymbol>())
         {
+            var skipSetterGenerationOnProperty = member.GetAttributes().Any(a => IsSetterGenerationAttribute(a));
+            if (skipSetterGenerationOnProperty)
+                continue;
+
             var hasPublicSetter = member.SetMethod != null && member.SetMethod.DeclaredAccessibility == Accessibility.Public;
             if (!hasPublicSetter)
                 continue;
 
             var paramName = member.Name.FirstCharToLower();
-            var signature = $"public {awaiterClassName}<T> With{member.Name}(string {paramName})";
+            //var paramType = member.Type.Name;
+            var paramType = member.Type.ToDisplayString();
+            var signature = $"public {awaiterClassName}<T> With{member.Name}({paramType} {paramName})";
             if (signatures.Contains(signature))
                 continue;
 
@@ -166,6 +201,13 @@ namespace {namespaceName}
                 """);
             signatures.Add(signature);
         }
+    }
+
+    private static bool IsSetterGenerationAttribute(AttributeData a)
+    {
+        //return a.AttributeClass.Name == "SkipSetterGenerationAttribute";
+        return string.Equals(a.AttributeClass.Name, "SkipSetterGeneration", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(a.AttributeClass.Name, "SkipSetterGenerationAttribute", System.StringComparison.OrdinalIgnoreCase);
     }
 
     private static void GenerateProxyMethods(INamedTypeSymbol classSymbol, string awaiterClassName, StringBuilder sourceBuilder, List<string> signatures)
@@ -220,36 +262,6 @@ namespace {namespaceName}
         }
     }
 
-    /*
-     Generates wrapper methods for each method in the class that has the attribute
-     For eg:
-        public partial class SomeService
-        {
-            // Given
-            private Task<string> DoSomething(SomeArgs data)
-            {
-                return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
-            }
-
-            // Generated
-            public SomeArgsAwaiter<string> DoSomethingAsync()
-            {
-                return new SomeArgsAwaiter<string>(DoSomething);
-            }
-
-            // Given
-            private Task<string> DoSomething1(SomeArgs data, string additionalString)
-            {
-                return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}: {additionalString}");
-            }
-
-            // Generated
-            public SomeArgsAwaiter<string> DoSomething1Async(string additionalString)
-            {
-                return new SomeArgsAwaiter<string>(args => DoSomething1(args, additionalString));
-            }
-        }
-     */
     private void GeneratePartialClassMethods(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
     {
         foreach (var classDecl in receiver.PartialClasses)
@@ -376,50 +388,4 @@ namespace {namespaceName}
         return param != null;
     }
 
-}
-
-public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
-{
-    public List<ClassDeclarationSyntax> ConfigurableTaskClasses { get; } = new List<ClassDeclarationSyntax>();
-    public List<ClassDeclarationSyntax> PartialClasses { get; } = new List<ClassDeclarationSyntax>();
-
-
-    public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
-    {
-        // Check if the syntax node is a class declaration with the specific attribute
-        if (syntaxNode is ClassDeclarationSyntax classDecl)
-        {
-            CollectClass(classDecl);
-        }
-    }
-
-    private void CollectClass(ClassDeclarationSyntax classDecl)
-    {
-        if (IsConfigurableTaskClass(classDecl))
-        {
-            ConfigurableTaskClasses.Add(classDecl);
-        }
-        else if (IsInPartialClass(classDecl))
-        {
-            PartialClasses.Add(classDecl);
-        }
-    }
-
-    private static bool IsInPartialClass(ClassDeclarationSyntax classDecl)
-    {
-        return classDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
-    }
-
-    private static bool IsConfigurableTaskClass(ClassDeclarationSyntax classDecl)
-    {
-        return classDecl.AttributeLists.Any(al => al.Attributes.Any(a => IsConfigurableTaskAttrib(a)));
-    }
-
-    private static bool IsConfigurableTaskAttrib(AttributeSyntax a)
-    {
-        var name = a.Name.ToString();
-
-        return name.Equals("CreateConfigurableTaskAttribute", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("CreateConfigurableTask", StringComparison.OrdinalIgnoreCase);
-    }
 }
