@@ -8,6 +8,9 @@ public class SomeArgs
     public string SomeStuff { get; set; }
     public string SomeStuff1 { get; set; }
 
+    public int MyProperty { get; set; }
+    public bool AsyncRan { get; private set; }
+
     public SomeArgs WithSomeStuff(string someStuff)
     {
         SomeStuff = someStuff;
@@ -17,6 +20,7 @@ public class SomeArgs
     public async Task<SomeArgs> SomeAsyncOperation(string myParam)
     {
         await Task.Delay(10);
+        AsyncRan = true;
         return this;
     }
 }
@@ -40,6 +44,7 @@ public partial class SomeService
         return Task.FromResult($"Doing something with {data.SomeStuff} and {data.SomeStuff1}");
     }
 }
+
 
 //// This is generated
 //public class SomeArgsAwaiter

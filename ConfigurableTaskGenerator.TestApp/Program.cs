@@ -9,34 +9,17 @@ internal class Program
 {
     private static async Task Main(string[] args)
     {
-        //var a = new SomeService();
-        //await a.DoSomethingAsync(1)
-        //    .SomeAsyncOperation("abc")
-        //    .WithSomeStuff1("xyz")
-        //   ;
+        var service = new SomeService();
+        var result = await service
+            .DoSomethingAsync(1)
+            .SomeAsyncOperation("abc")
+            .WithMyProperty(2)
+            .WithSomeStuff("xyz")
+            ;
+
+        
 
 
-        //await new HttpService().PostAsync("https://www.google.com")
-        //    .WithBody(new { a = "yolo" })
-
-        //    ;
-
-
-        /*
-         curl -X 'POST' \
-              'https://localhost:7233/login' \
-              -H 'Content-Type: application/json' \
-              -d '{
-              "userName": "admin",
-              "password": "password"
-            }'
-         */
-
-        //var service = new HttpService();
-        //var response = await service.PostAsync("https://localhost:7233/login")
-        //    .WithBody(new { userName = "admin", password = "password" });
-
-        //setup httpservice using dependency injection
 
         await HttpExample.Run();
 

@@ -27,7 +27,14 @@ public class HttpExample
 
         var str = await httpService.PostAsync("/login")
             .WithBody(new { userName = "admin", password = "password" })
-            .ReadAsJsonAsync(new { token = "" });
+            //.WithHeader("Content-Type", "application/json")
+            //.WithHeader("Authorization", "")
+            //.WithBlaBla(1)
+            ;
+            /*.ReadAsJsonAsync(new { token = "" })*/;
+
+
+        // var abc = (await (await bla.Do()).Hello());
 
 
     }
@@ -37,7 +44,12 @@ public class HttpExample
 [CreateConfigurableTask]
 public class HttpArgs
 {
+    private readonly HttpService _svc;
+
     public string Url { get; set; }
+    //public int BlaBla { get; set; }
+
+
 
     [SkipSetterGeneration]
     public Dictionary<string, string> Headers { get; set; }
@@ -49,6 +61,16 @@ public class HttpArgs
         Headers.Add(key, value);
         return this;
     }
+
+    public HttpArgs()
+    {
+
+    }
+
+    public HttpArgs(HttpService svc)
+    {
+        _svc = svc;
+    }
 }
 
 
@@ -58,7 +80,7 @@ public partial class HttpService
 
     public HttpService(HttpClient client)
     {
-        _httpArgsFactory = _ => new();
+        _httpArgsFactory = _ => new(this);
         _client = client;
     }
 
