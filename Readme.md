@@ -17,19 +17,19 @@ The ConfigurableTaskGenerator library simplifies the creation of fluent APIs for
 ## Usage Example
 The following example demonstrates how you can use the `ConfigurableTaskGenerator` to chain asynchronous operations fluently:
 
-Usage:
+User Code:
 ```csharp
+public static void Main()
+{
     var service = new SomeService();
     var result = await service
-        .DoSomethingAsync(1)
+        .DoSomething()
         .SomeAsyncOperation("abc")
         .WithMyProperty(2)
         .WithSomeStuff("xyz")
         ;
-```
+}
 
-User Code:
-```csharp
 [CreateConfigurableTask]
 public class SomeArgs
 {
