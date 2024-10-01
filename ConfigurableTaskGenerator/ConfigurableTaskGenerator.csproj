@@ -4,7 +4,45 @@
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
+
+	<PropertyGroup Condition="$(Configuration) == 'Release'">
+		<PackageVersion>0.0.11</PackageVersion>
+		<Version>0.0.11</Version>
+		
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Title>ConfigurableTaskGenerator</Title>
+		<Copyright>Jonas Kamsker</Copyright>
+		<PackageProjectUrl>https://github.com/JKamsker/ConfigurableTaskGenerator</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/JKamsker/ConfigurableTaskGenerator</RepositoryUrl>
+
+
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+
+		<PackageId>ConfigurableTaskGenerator</PackageId>
+		<Authors>Jonas Kamsker</Authors>
+		<Description>Generates strongly typed stringformatters based on stringformats.</Description>
+		<!--<PackageIcon>logo_small_128x128.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>-->
+		<PackageTags>Template, c#, SourceGen</PackageTags>
+
+	</PropertyGroup>
+
+	<ItemGroup Condition="$(Configuration) == 'Release'">
+		<!--<None Include="..\assets\logo\logo_small_128x128.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>-->
+
+		<!-- Package the generator in the analyzer directory of the nuget package -->
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
 
 
 	<ItemGroup>

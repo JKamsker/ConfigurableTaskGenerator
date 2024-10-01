@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Xunit;
 
 namespace ConfigurableTaskGenerator.Tests;
+
 public class GenericsTest
 {
     [Fact]
@@ -38,7 +39,6 @@ public class GenericsTest
                 }
             }
 
-
             public partial class SomeGenericService
             {
                 private Task<string> DoSomethingAsync(SomeGenericArgs<string> data, int a)
@@ -50,9 +50,5 @@ public class GenericsTest
 
         var result = SourceGenerator.Run<ConfigurableTaskSourceGenerator>(code);
         var simpleGen = result.ToSimpleGen();
-
     }
-
-   
 }
-

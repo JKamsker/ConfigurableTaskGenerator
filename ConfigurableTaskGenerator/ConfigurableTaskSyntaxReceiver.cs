@@ -10,20 +10,24 @@ namespace ConfigurableTaskGenerator;
 
 public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
 {
-    public List<ClassDeclarationSyntax> ConfigurableTaskClasses { get; } = new List<ClassDeclarationSyntax>();
-    public List<ClassDeclarationSyntax> PartialClasses { get; } = new List<ClassDeclarationSyntax>();
-
+    public List<TypeDeclarationSyntax> ConfigurableTaskClasses { get; } = [];
+    public List<TypeDeclarationSyntax> PartialClasses { get; } = [];
 
     public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
     {
         // Check if the syntax node is a class declaration with the specific attribute
-        if (syntaxNode is ClassDeclarationSyntax classDecl)
+        if (syntaxNode is TypeDeclarationSyntax classDecl)
         {
             CollectClass(classDecl);
         }
+
+        //if(syntaxNode is RecordDeclarationSyntax recordDecl)
+        //{
+        //    CollectRecord(recordDecl);
+        //}
     }
 
-    private void CollectClass(ClassDeclarationSyntax classDecl)
+    private void CollectClass(TypeDeclarationSyntax classDecl)
     {
         if (IsConfigurableTaskClass(classDecl))
         {
@@ -35,12 +39,12 @@ public class ConfigurableTaskSyntaxReceiver : ISyntaxReceiver
         }
     }
 
-    private static bool IsInPartialClass(ClassDeclarationSyntax classDecl)
+    private static bool IsInPartialClass(TypeDeclarationSyntax classDecl)
     {
         return classDecl.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword));
     }
 
-    private static bool IsConfigurableTaskClass(ClassDeclarationSyntax classDecl)
+    private static bool IsConfigurableTaskClass(TypeDeclarationSyntax classDecl)
     {
         return classDecl.AttributeLists.Any(al => al.Attributes.Any(a => IsConfigurableTaskAttrib(a)));
     }

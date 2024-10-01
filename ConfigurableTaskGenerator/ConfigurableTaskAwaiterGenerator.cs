@@ -1,15 +1,14 @@
-﻿using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
+using System.Text;
 
 namespace ConfigurableTaskGenerator;
+
 internal static class ConfigurableTaskAwaiterGenerator
 {
-
     internal static void GenerateAwaiterClasses(GeneratorExecutionContext context, ConfigurableTaskSyntaxReceiver receiver, Compilation compilation)
     {
         foreach (var classDecl in receiver.ConfigurableTaskClasses)
@@ -65,7 +64,7 @@ namespace {namespaceName}
             }}
             return await _taskFactory(_args);
         }}
-        
+
         [EditorBrowsable(EditorBrowsableState.Never)]
         public TaskAwaiter<T> GetAwaiter()
         {{
@@ -137,12 +136,28 @@ namespace {namespaceName}
 
     private static void GenerateProxyMethods(INamedTypeSymbol classSymbol, string awaiterClassName, StringBuilder sourceBuilder, List<string> signatures)
     {
+        var members = classSymbol
+            .GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(x => x.DeclaredAccessibility != Accessibility.Private)
+            .Where(x => x.MethodKind == MethodKind.Ordinary)
+            .Where(x => IsNameLegal(x));
+
         // Generate Methods for each Method in SomeArgs
-        foreach (var member in classSymbol.GetMembers().OfType<IMethodSymbol>())
+        foreach (var member in members)
         {
-            // just relay ordinary methods
-            if (member.MethodKind != MethodKind.Ordinary)
-                continue;
+            var methodName = member.Name;
+
+            // Handle generic methods
+            var typeParameters = member.TypeParameters.Any()
+                ? $"<{string.Join(", ", member.TypeParameters.Select(tp => tp.Name))}>"
+                : string.Empty;
+
+            // Collect generic constraints, if any
+            var constraints = GetGenericConstraints(member);
+
+            var parameters = string.Join(", ", member.Parameters.Select(p => $"{p.Type} {p.Name}"));
+            var parameterNames = string.Join(", ", member.Parameters.Select(p => p.Name));
 
             if (member.IsAsync)
             {
@@ -159,32 +174,79 @@ namespace {namespaceName}
                 if (!(isValidGenericTask || isValidNonGenericTask))
                     continue;
 
-
-                var methodName = member.Name;
-                var parameters = string.Join(", ", member.Parameters.Select(p => $"{p.Type} {p.Name}"));
+                // Build the method signature including type parameters and constraints
                 sourceBuilder.AppendLine($$"""
-                            public {{awaiterClassName}}<T> {{methodName}}({{parameters}})
-                            {
-                                Func<Task> taskFactory = async () => await _args.{{methodName}}({{string.Join(", ", member.Parameters.Select(p => p.Name))}});
-                                _taskGenerators.Add(taskFactory);
-                                return this;
-                            }
-                    """);
+                public {{awaiterClassName}}<T> {{methodName}}{{typeParameters}}({{parameters}})
+                {{constraints}}
+                {
+                    Func<Task> taskFactory = async () => await _args.{{methodName}}({{parameterNames}});
+                    _taskGenerators.Add(taskFactory);
+                    return this;
+                }
+            """);
             }
             else
             {
-                var signature = $"public {awaiterClassName}<T> {member.Name}({string.Join(", ", member.Parameters.Select(p => $"{p.Type} {p.Name}"))})";
+                // Non-async methods
+                var signature = $"public {awaiterClassName}<T> {member.Name}{typeParameters}({parameters}) {constraints}";
 
                 sourceBuilder.AppendLine($$"""
-                        {{signature}}
-                        {
-                            _args.{{member.Name}}({{string.Join(", ", member.Parameters.Select(p => p.Name))}});
-                            return this;
-                        }
-                """);
+                {{signature}}
+                {
+                    _args.{{methodName}}({{parameterNames}});
+                    return this;
+                }
+            """);
+
                 signatures.Add(signature);
             }
         }
     }
 
+    /// <summary>
+    /// Retrieves the generic constraints for a given method.
+    /// </summary>
+    private static string GetGenericConstraints(IMethodSymbol method)
+    {
+        var constraints = new List<string>();
+
+        foreach (var typeParam in method.TypeParameters)
+        {
+            var paramConstraints = new List<string>();
+
+            // Check for class/struct constraints (reference type or value type)
+            if (typeParam.HasReferenceTypeConstraint)
+                paramConstraints.Add("class");
+            if (typeParam.HasValueTypeConstraint)
+                paramConstraints.Add("struct");
+
+            // Add constraints on specific types (e.g., TEntity : IEntity)
+            paramConstraints.AddRange(typeParam.ConstraintTypes.Select(t => t.ToDisplayString()));
+
+            // Add constructor constraint (new())
+            if (typeParam.HasConstructorConstraint)
+                paramConstraints.Add("new()");
+
+            if (paramConstraints.Any())
+            {
+                constraints.Add($"where {typeParam.Name} : {string.Join(", ", paramConstraints)}");
+            }
+        }
+
+        return constraints.Any() ? string.Join(" ", constraints) : string.Empty;
+    }
+
+    private static HashSet<string> _illegalNames = [
+        "GetHashCode",
+        "PrintMembers",
+        "Equals",
+        "<Clone>$",
+        "GetAwaiter",
+        "AwaitAsync",
+    ];
+
+    private static bool IsNameLegal(IMethodSymbol symbol)
+    {
+        return !_illegalNames.Contains(symbol.Name);
+    }
 }
