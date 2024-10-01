@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 using System;
 using System.Collections.Generic;
@@ -41,5 +42,17 @@ internal static class Extensions
     public static T? GetFirstParentOfType<T>(this SyntaxNode? node) where T : SyntaxNode
     {
         return node?.EnumerateParents().OfType<T>().FirstOrDefault();
+    }
+
+    public static LanguageVersion GetLanguageVersion(this Compilation compilation)
+    {
+        var tree = compilation.SyntaxTrees.FirstOrDefault();
+
+        if (tree == null)
+        {
+            return LanguageVersionFacts.MapSpecifiedToEffectiveVersion(LanguageVersion.Default);
+        }
+
+        return ((CSharpParseOptions)tree.Options).LanguageVersion;
     }
 }

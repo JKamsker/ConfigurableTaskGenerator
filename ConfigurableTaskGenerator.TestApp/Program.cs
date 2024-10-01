@@ -17,7 +17,15 @@ internal class Program
             .WithSomeStuff("xyz")
             ;
 
-        
+
+
+        //var genservice = new SomeGenericService();
+        //var genresult = await genservice
+        //    .DoSomethingAsync(1)
+        //    .SomeAsyncOperation("abc")
+        //    .WithMyProperty(2)
+        //    .WithSomeStuff("xyz")
+        //    ;
 
 
 

@@ -18,4 +18,15 @@ internal static class Extensions
         }
         return count;
     }
+
+    internal static List<SimpleGen> ToSimpleGen(this Microsoft.CodeAnalysis.GeneratorDriverRunResult result)
+    {
+        return result.Results.First().GeneratedSources
+            .Select(x => new SimpleGen(x.HintName, x.SourceText.ToString()))
+            .ToList()
+            ;
+    }
 }
+
+internal record SimpleGen(string HintName, string Text);
+

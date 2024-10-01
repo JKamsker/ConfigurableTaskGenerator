@@ -69,7 +69,7 @@ public class Tests
         // HardCode:		result.Results.First().GeneratedSources[0].SourceText.ToString()
         // result.Results.First().GeneratedSources where HintName == "SomeArgs_TaskGenerator.g.cs" .SourceText.ToString()
 
-        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_TaskAwaiterWrapperGenerator.g.cs").SourceText;
+        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_ConfigurableTaskWrap.g.cs").SourceText;
         Assert.NotNull(gensource);
 
         var sourceText = result.Results.First().GeneratedSources.First(x => x.HintName == "SomeArgs_AwaitableTask.g.cs").SourceText.ToString();
@@ -92,6 +92,9 @@ public class Tests
         Assert.Contains("public SomeArgsAwaiter<T> WithHeaders(Dictionary<string, string> headers)", sourceText, StringComparison.OrdinalIgnoreCase);
         count = sourceText.CountStringOccurrences( "public SomeArgsAwaiter<T> WithHeaders(Dictionary<string, string> headers)");
         Assert.Equal(1, count);
+
+
+        var simpleGen = result.ToSimpleGen();
     }
 
     // Tests if nonpartial class gets a wrapper class (it should not)
@@ -126,7 +129,7 @@ public class Tests
         // HardCode:		result.Results.First().GeneratedSources[0].SourceText.ToString()
         // result.Results.First().GeneratedSources where HintName == "SomeArgs_TaskGenerator.g.cs" .SourceText.ToString()
 
-        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_TaskAwaiterWrapperGenerator.g.cs").SourceText;
+        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_ConfigurableTaskWrap.g.cs").SourceText;
         Assert.Null(gensource);
     }
 
@@ -170,7 +173,7 @@ public class Tests
         // HardCode:		result.Results.First().GeneratedSources[0].SourceText.ToString()
         // result.Results.First().GeneratedSources where HintName == "SomeArgs_TaskGenerator.g.cs" .SourceText.ToString()
 
-        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_TaskAwaiterWrapperGenerator.g.cs").SourceText;
+        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_ConfigurableTaskWrap.g.cs").SourceText;
         Assert.NotNull(gensource);
 
         var sourceText = result.Results.First().GeneratedSources.First(x => x.HintName == "SomeArgs_AwaitableTask.g.cs").SourceText.ToString();
@@ -224,7 +227,7 @@ public class Tests
         // HardCode:		result.Results.First().GeneratedSources[0].SourceText.ToString()
         // result.Results.First().GeneratedSources where HintName == "SomeArgs_TaskGenerator.g.cs" .SourceText.ToString()
 
-        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_TaskAwaiterWrapperGenerator.g.cs").SourceText;
+        var gensource = result.Results.First().GeneratedSources.FirstOrDefault(x => x.HintName == "ArgsUser_ConfigurableTaskWrap.g.cs").SourceText;
         Assert.NotNull(gensource);
 
         var sourceText = result.Results.First().GeneratedSources.First(x => x.HintName == "SomeArgs_AwaitableTask.g.cs").SourceText.ToString();
