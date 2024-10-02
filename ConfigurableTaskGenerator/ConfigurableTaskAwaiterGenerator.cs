@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -99,27 +100,33 @@ namespace {namespaceName}
         if (skipSetterGeneration)
             return;
 
-        foreach (var member in classSymbol.GetMembers().OfType<IPropertySymbol>())
+        foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>())
         {
-            var skipSetterGenerationOnProperty = member.GetAttributes().Any(a => IsSetterGenerationAttribute(a));
+            var skipSetterGenerationOnProperty = property.GetAttributes().Any(a => IsSetterGenerationAttribute(a));
             if (skipSetterGenerationOnProperty)
                 continue;
 
-            var hasPublicSetter = member.SetMethod != null && member.SetMethod.DeclaredAccessibility == Accessibility.Public;
+            var hasPublicSetter = property.SetMethod != null && property.SetMethod.DeclaredAccessibility == Accessibility.Public;
             if (!hasPublicSetter)
                 continue;
 
-            var paramName = member.Name.FirstCharToLower();
+            var paramName = property.Name.FirstCharToLower();
             //var paramType = member.Type.Name;
-            var paramType = member.Type.ToDisplayString();
-            var signature = $"public {awaiterClassName}<T> With{member.Name}({paramType} {paramName})";
+            var paramType = property.Type.ToDisplayString();
+            var signature = $"public {awaiterClassName}<T> With{property.Name}({paramType} {paramName})";
             if (signatures.Contains(signature))
                 continue;
+
+            // Get XML comments for the property
+            var xmlComments = GetXmlComments(property);
+
+            // Generate the setter method with XML comments
+            sourceBuilder.AppendLine(xmlComments);
 
             sourceBuilder.AppendLine($$"""
                         {{signature}}
                         {
-                            _args.{{member.Name}} = {{paramName}};
+                            _args.{{property.Name}} = {{paramName}};
                             return this;
                         }
                 """);
@@ -159,6 +166,9 @@ namespace {namespaceName}
             var parameters = string.Join(", ", member.Parameters.Select(p => $"{p.Type} {p.Name}"));
             var parameterNames = string.Join(", ", member.Parameters.Select(p => p.Name));
 
+            // Get XML comments
+            var xmlComments = GetXmlComments(member);
+
             if (member.IsAsync)
             {
                 if (!(member.ReturnsVoid == false && member.ReturnType is INamedTypeSymbol returnType))
@@ -174,7 +184,8 @@ namespace {namespaceName}
                 if (!(isValidGenericTask || isValidNonGenericTask))
                     continue;
 
-                // Build the method signature including type parameters and constraints
+                // Build the method signature including type parameters, constraints, and XML comments
+                sourceBuilder.AppendLine(xmlComments);
                 sourceBuilder.AppendLine($$"""
                 public {{awaiterClassName}}<T> {{methodName}}{{typeParameters}}({{parameters}})
                 {{constraints}}
@@ -190,6 +201,7 @@ namespace {namespaceName}
                 // Non-async methods
                 var signature = $"public {awaiterClassName}<T> {member.Name}{typeParameters}({parameters}) {constraints}";
 
+                sourceBuilder.AppendLine(xmlComments);
                 sourceBuilder.AppendLine($$"""
                 {{signature}}
                 {
@@ -243,10 +255,29 @@ namespace {namespaceName}
         "<Clone>$",
         "GetAwaiter",
         "AwaitAsync",
+        "ToString",
     ];
 
     private static bool IsNameLegal(IMethodSymbol symbol)
     {
         return !_illegalNames.Contains(symbol.Name);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage
+    (
+        "MicrosoftCodeAnalysisCorrectness",
+        "RS1035:Do not use APIs banned for analyzers",
+        Justification = "<Pending>"
+    )]
+    private static string GetXmlComments(ISymbol symbol)
+    {
+        var xmlComment = symbol.GetDocumentationCommentXml();
+        if (!string.IsNullOrEmpty(xmlComment))
+        {
+            var xmlCommentLines = xmlComment.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            return string.Join(Environment.NewLine, xmlCommentLines.Select(line => $"/// {line.Trim()}"));
+        }
+
+        return string.Empty;
     }
 }

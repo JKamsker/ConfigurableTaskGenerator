@@ -444,4 +444,57 @@ public class Tests
         Assert.Contains("public class SomeArgsAwaiter<T>", sourceText);
         Assert.Contains("where TEntity : ConfigurableTaskGenerator.TestApp.IEntity", sourceText);
     }
+
+    // XML Comments are copied to the generated method (Properties and methods)
+    [Fact]
+    public void XML_Comments_Are_Copied()
+    {
+        var result = SourceGenerator.Run<ConfigurableTaskSourceGenerator>("""
+            namespace ConfigurableTaskGenerator.TestApp;
+
+            public class CreateConfigurableTaskAttribute : System.Attribute
+            {
+                public CreateConfigurableTaskAttribute()
+                {
+                }
+            }
+
+            [CreateConfigurableTask]
+            public record SomeArgs
+            {
+                /// <summary>
+                /// Some stuff
+                /// </summary>
+                public string SomeStuff { get; set; }
+
+                /// <summary>
+                /// Some stuff1
+                /// </summary>
+                public string SomeStuff1 { get; set; }
+
+                /// <summary>
+                /// Haha yolo
+                /// </summary>
+                public string Haha(string a)
+                {
+                    return a;
+                }
+            }
+
+            internal partial class ArgsUser
+            {
+                /// <summary>
+                /// This does something
+                /// </summary>
+                private Task<string> DoSomething(SomeArgs data)
+                {
+                }
+            }
+            """);
+
+        var simpleGen = result.ToSimpleGen();
+        var sourceText = simpleGen.Where(x => x.HintName == "SomeArgs_AwaitableTask.g.cs").Select(x => x.Text).FirstOrDefault();
+
+        Assert.Contains("/// <summary>", sourceText);
+    }
 }
